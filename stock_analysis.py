@@ -16,15 +16,37 @@ def fetch_data(tickers: tuple, timeframe: tuple):
 
 def display():
     try:
-        st.header("Adjusted Close")
-        data = fetch_data(selected_tickers, selected_time).head()
-        st.dataframe(pd.concat([data.head(), data.tail()]))
+        data = fetch_data(selected_tickers, selected_time)
+        if data.empty:
+            st.write("Invalid request. Check tickers or date range.")
+        else:
+            adj_close(data)
+            daily_returns(data)
     except:
         st.write("Must select one or more tickers to display.")
 
+# daily returns function
+
+@st.cache_data
+def adj_close(data):
+    st.header("Adjusted Close")
+    data = fetch_data(selected_tickers, selected_time).head()
+    st.dataframe(pd.concat([data.head(), data.tail()]))
+
+@st.cache_data
+def daily_returns(data):
+    st.header("Daily Returns")
+    data = fetch_data(selected_tickers, selected_time)
+    print(selected_tickers, selected_time)
+    cut_data = pd.concat([data.head(), data.tail()])
+    st.dataframe(cut_data.pct_change().dropna().style.format("{:.2%}"))
+    st.header("Data Overview")
+    st.write(data.describe())
+
+
 # streamlit page
 
-#setup
+# setup
 st.set_page_config(page_title="Comparative Stock Analysis and Basic Portfolio Metrics", page_icon=":bar_chart:", initial_sidebar_state="auto")
 st.title("Comparative Stock Analysis and Basic Portfolio Metrics")
 # add ticker select as a dropdown
@@ -38,6 +60,9 @@ submit = st.sidebar.button("Display Data")
 # check for submission
 if submit:
     display()
+
+
+
 
 
 
