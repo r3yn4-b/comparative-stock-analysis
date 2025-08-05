@@ -22,7 +22,9 @@ def display():
             st.write("To display portfolio metrics, at least two tickers must be selected.")
         else:
             unweighted_returns(pct_data)
-            get_weights(pct_data)
+            st.header('Daily Portfolio Returns (Weighted Assets)')
+            weights, weighted_data = get_weights(pct_data)
+            weighted_returns(pct_data, weighted_data)
             correlation(pct_data)
     except:
         st.subheader("Must select one or more tickers to display.")
@@ -31,7 +33,7 @@ def display():
 
 def correlation(pct_data):
     st.header('Asset Correlation')
-    st.write("The correlation coefficient shown describles the movement of the stated assets with one another. A coefficient of +1 describes a perfect positive correlation while a correlation of -1 describles a perfect negative correlation.")
+    st.write("The correlation coefficient shown describes the movement of the stated assets with one another. A coefficient of +1 describes a perfect positive correlation while a correlation of -1 describles a perfect negative correlation.")
     correlation_data = pct_data.corr(method='pearson')
     columns = st.columns(3)
 
@@ -59,7 +61,6 @@ def unweighted_returns(pct_data):
     weighted_returns(pct_data, weighted_data)
 
 def get_weights(pct_data):
-    st.header('Daily Portfolio Returns (Weighted Assets)')
     st.write('Type desired weighting of each asset below, as a percentage out of 100.')
     columns = st.columns(3)
     error = st.empty()
@@ -70,7 +71,8 @@ def get_weights(pct_data):
         with columns[(selected_tickers.index(ticker))%3]:
             weights.append(st.number_input(label=ticker, min_value=0, max_value=100, step=1, key=ticker))
     # call function to check if weights sum to 100
-    check_weights(weights, pct_data, error)
+    weighted_data = check_weights(weights, pct_data, error)
+    return weights, weighted_data
     
 def check_weights(weights, pct_data, error):
     # if weights sum to 100, proceed to calculating/displaying weighted returns
@@ -84,12 +86,11 @@ def check_weights(weights, pct_data, error):
         weighted_data = pct_data.dot(np.array(weights)/100)
 
         # call function to show data
-        weighted_returns(pct_data, weighted_data)
+        return weighted_data
     else:
         error.write('Weights must add up to 100.')
 
 def weighted_returns(pct_data, weighted_data):
-
     # display returns plot
     st.write("**Individual Daily Returns** best viewed over shorter periods of time. For longer timeframes, consult **Cumulative Returns** below.")
     col1, col2 = st.columns([0.7, 0.3])

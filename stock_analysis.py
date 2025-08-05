@@ -7,7 +7,7 @@ from datetime import date
 st.set_page_config(page_title="Comparative Stock Analysis and Basic Portfolio Metrics", page_icon=":bar_chart:", initial_sidebar_state="expanded")
 st.title("📊 Comparative Stock Analysis and Basic Portfolio Metrics")
 
-pages = [st.Page('pages/individual_analysis.py', title='📈 Individual Analysis'), st.Page('pages/portfolio_analysis.py', title='📈 Portfolio Analysis')]
+pages = [st.Page('pages/individual_analysis.py', title='📈 Individual Analysis'), st.Page('pages/portfolio_analysis.py', title='📈 Portfolio Analysis'), st.Page('pages/markovitz_optimisation.py', title='📈 Markovitz Optimisation')]
 st.navigation(pages).run()
 
 st.set_page_config(page_title="Comparative Stock Analysis and Basic Portfolio Metrics", page_icon=":bar_chart:", initial_sidebar_state="expanded")
