@@ -1,11 +1,9 @@
 # import libraries
-import pandas as pd
-import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
-from pages.individual_analysis import fetch_data, colors
+from utils import fetch_data, colors
 
 st.title("📈 Portfolio Analysis")
 
@@ -24,7 +22,8 @@ def display():
             unweighted_returns(pct_data)
             st.header('Daily Portfolio Returns (Weighted Assets)')
             weights, weighted_data = get_weights(pct_data)
-            weighted_returns(pct_data, weighted_data)
+            if weighted_data is not None:
+                weighted_returns(pct_data, weighted_data)
             correlation(pct_data)
     except:
         st.subheader("Must select one or more tickers to display.")
@@ -33,7 +32,7 @@ def display():
 
 def correlation(pct_data):
     st.header('Asset Correlation')
-    st.write("The correlation coefficient shown describes the movement of the stated assets with one another. A coefficient of +1 describes a perfect positive correlation while a correlation of -1 describles a perfect negative correlation.")
+    st.write("The correlation coefficient shown describes the movement of the stated assets with one another. A coefficient of +1 describes a perfect positive correlation while a correlation of -1 describes a perfect negative correlation.")
     correlation_data = pct_data.corr(method='pearson')
     columns = st.columns(3)
 
@@ -76,10 +75,7 @@ def get_weights(pct_data):
     
 def check_weights(weights, pct_data, error):
     # if weights sum to 100, proceed to calculating/displaying weighted returns
-    sum = 0
-    for weight in weights:
-        sum += weight
-    if sum == 100:
+    if sum(weights) == 100:
         error.empty()
 
         # sum all columns according to weighting
@@ -94,21 +90,21 @@ def weighted_returns(pct_data, weighted_data):
     # display returns plot
     st.write("**Individual Daily Returns** best viewed over shorter periods of time. For longer timeframes, consult **Cumulative Returns** below.")
     col1, col2 = st.columns([0.7, 0.3])
-    plot = sns.lineplot(data=weighted_data, color='orange')
+    plot = sns.lineplot(data=weighted_data*100, color='orange')
     plot.set(xlabel='Date', ylabel='Daily Return (%)')
     col1.pyplot(plot.get_figure())
     plt.close()
     # display returns in table
-    col2.dataframe(weighted_data.to_frame().style.applymap(colors).format("{:.2%}"))
+    col2.dataframe(weighted_data.to_frame().style.map(colors).format("{:.2%}"))
 
     # total cum. returns
-    cum_returns = (weighted_data+1).cumprod()
+    cum_returns = (weighted_data+1).cumprod() - 1
     # individual cum. returns
-    ind_data = (pct_data+1).cumprod()
+    ind_data = (pct_data+1).cumprod() - 1
     # add to plot
     plot, ax = plt.subplots(figsize=(8, 5))
-    sns.lineplot(data=ind_data, linewidth=0.7, ax=ax)
-    sns.lineplot(data=cum_returns, linewidth=1.4, color='red', ax=ax, label='Portfolio')
+    sns.lineplot(data=ind_data*100, linewidth=0.7, ax=ax)
+    sns.lineplot(data=cum_returns*100, linewidth=1.4, color='red', ax=ax, label='Portfolio')
     ax.legend()
     ax.set(xlabel='Date', ylabel='Cumulative Return (%)')
     # show plot
@@ -122,7 +118,7 @@ def weighted_returns(pct_data, weighted_data):
     
 # check for submission and run page
 
-st.write("This page analyses all assets' performance and provides conjugate portfolio data. To view individual asset performance, select the 'Individual Analysis' tab.")
+st.write("This page analyses all assets' performance and provides combined portfolio data. To view individual asset performance, select the 'Individual Analysis' tab.")
 
 if "start" in st.session_state and st.session_state["start"]:
     selected_tickers = st.session_state["selected_tickers"]

@@ -1,18 +1,11 @@
 # import libraries
 import pandas as pd
-import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
+from utils import fetch_data, colors
 st.title("📈 Individual Stock Analysis")
-
-# fetch data using yahoo finance API
-
-@st.cache_data
-def fetch_data(tickers: tuple, timeframe: tuple):
-    data = yf.download(tickers, start = timeframe[0], end = timeframe[1])['Close'].sort_index()
-    return data
 
 # display data on streamlit interface
 
@@ -31,17 +24,6 @@ def display():
             return_spread(pct_data)
     except:
         st.header("Must select one or more tickers to display.")
-
-# changes data value colors
-
-def colors(value):
-    if value > 0:
-        color = 'green'
-    elif value < 0:
-        color = 'red'
-    else:
-        color = 'grey'
-    return f'color: {color};'
 
 # fetches and formats historic data
 
@@ -68,9 +50,9 @@ def daily_returns(pct_data):
     # tabulated overview
     col1, col2 = st.columns(2)
     col1.subheader("Head rows")
-    col1.dataframe(pct_data.head().style.applymap(colors).format("{:.2%}"))
+    col1.dataframe(pct_data.head().style.map(colors).format("{:.2%}"))
     col2.subheader("Tail rows")
-    col2.dataframe(pct_data.tail().style.applymap(colors).format("{:.2%}"))
+    col2.dataframe(pct_data.tail().style.map(colors).format("{:.2%}"))
     st.write("Head and tail data has been displayed to observe general movement over the selected timeframe.")
 
 # calculates metrics avg. daily return, daily volatility, annual volatility, total cum. return
@@ -86,9 +68,9 @@ def calculate_metrics(pct_data):
     # annual volatility
     annual_volatility = daily_volatility * np.sqrt(252)
     # total cum. return
-    total_return = (daily_return+1).cumprod().iloc[-1]
+    total_return = (daily_return+1).cumprod().iloc[-1] - 1
     # join metrics
-    metrics = pd.concat([avg_daily_return, daily_volatility, annual_volatility, total_return], axis='columns', ignore_index=True).set_axis(['Avg. Daily Return', 'Daily Volatility', 'Annual Volatility', 'Total Cum. Product'], axis='columns')
+    metrics = pd.concat([avg_daily_return, daily_volatility, annual_volatility, total_return], axis='columns', ignore_index=True).set_axis(['Avg. Daily Return', 'Daily Volatility', 'Annual Volatility', 'Total Cum. Return'], axis='columns')
 
     # display as df
     # st.dataframe(metrics.style.format("{:.2%}"))
@@ -99,7 +81,7 @@ def calculate_metrics(pct_data):
         columns = st.columns(4)
         for i in range(0, 4):
             with columns[i]:
-                item = f"{metrics.loc[ticker.upper()][i]:.3%}"
+                item = f"{metrics.loc[ticker.upper()].iloc[i]:.3%}"
                 st.metric(label=metrics.columns[i], value=item)
                 st.divider()
 
@@ -113,7 +95,7 @@ def return_spread(pct_data):
     plot.set(xlabel='Daily Return (%)')
     st.pyplot(plot.get_figure())
     plt.close()
-    st.write("A left-biased peak shows that returns have historically been more concentrated below the mean than above it, and vice verse for a right-biased peak. This can give some insight into what future trends may follow.")
+    st.write("A left-biased peak shows that returns have historically been more concentrated below the mean than above it, and vice versa for a right-biased peak. This can give some insight into what future trends may follow.")
 
 # check for submission and run page
 

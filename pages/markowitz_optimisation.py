@@ -1,15 +1,13 @@
 # import libraries
 import pandas as pd
-import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import streamlit as st
-from pages.individual_analysis import fetch_data, colors
+from utils import fetch_data
 from scipy.optimize import minimize
 from datetime import date
 
-st.title("📈 Markovitz Optimisation")
+st.title("📈 Markowitz Optimisation")
 
 def display():
     try:
@@ -26,13 +24,13 @@ def display():
             ann_returns, ann_cov = annualise_data(pct_data)
             portfolios, weights_df = monte_carlo(ann_returns, ann_cov, risk_free, selected_tickers)
             best_vol_weights = find_best_vol(portfolios, weights_df)
-            best_vol_weights, min = min_vol(best_vol_weights, ann_cov)
+            best_vol_weights, min_volatility = min_vol(best_vol_weights, ann_cov)
             best_sharpe_weights = find_best_sharpe(portfolios, weights_df)
-            best_sharpe_weights, max = max_sharpe(best_sharpe_weights, ann_returns, ann_cov, risk_free)
+            best_sharpe_weights, max_sharpe_ratio = max_sharpe(best_sharpe_weights, ann_returns, ann_cov, risk_free)
 
             # display data
             efficient_frontier(portfolios, weights_df)
-            show_optimal(best_vol_weights, min, best_sharpe_weights, max, risk_free, ann_returns, ann_cov)
+            show_optimal(best_vol_weights, min_volatility, best_sharpe_weights, max_sharpe_ratio, risk_free, ann_returns, ann_cov)
     except:
         st.subheader("Must select one or more tickers to display.")
 
@@ -118,10 +116,10 @@ def find_best_vol(portfolios, weights_df):
 # find optimised weights for minimum volatility
  
 def min_vol(weights, ann_cov):
-    min = minimize(portfolio_vol, x0=weights, args=(ann_cov,), method='SLSQP', bounds=tuple((0,1) for ticker in range(len(selected_tickers))), constraints={'type':'eq', 'fun': lambda weights: np.sum(weights)-1})
-    best_weights = min.x
-    min = portfolio_vol(best_weights, ann_cov)
-    return best_weights, min
+    result = minimize(portfolio_vol, x0=weights, args=(ann_cov,), method='SLSQP', bounds=tuple((0,1) for ticker in range(len(selected_tickers))), constraints={'type':'eq', 'fun': lambda weights: np.sum(weights)-1})
+    best_weights = result.x
+    min_volatility = portfolio_vol(best_weights, ann_cov)
+    return best_weights, min_volatility
 
 # best starting weights for maximum sharpe ratio
 
@@ -133,13 +131,13 @@ def find_best_sharpe(portfolios, weights_df):
 # find optimised weights for maximum sharpe ratio
 
 def max_sharpe(weights, ann_returns, ann_cov, risk_free):
-    max = minimize(optimise_sharpe, x0=weights, args=(ann_returns, ann_cov, risk_free), method='SLSQP', bounds=tuple((0,1) for ticker in range(len(selected_tickers))), constraints={'type':'eq', 'fun': lambda weights: np.sum(weights)-1})
+    result = minimize(optimise_sharpe, x0=weights, args=(ann_returns, ann_cov, risk_free), method='SLSQP', bounds=tuple((0,1) for ticker in range(len(selected_tickers))), constraints={'type':'eq', 'fun': lambda weights: np.sum(weights)-1})
     # return negative of minimum value, to return the maximum value
-    best_weights = max.x
+    best_weights = result.x
     port_return = portfolio_return(best_weights, ann_returns)
     port_vol = portfolio_vol(best_weights, ann_cov)
-    max = portfolio_sharpe(port_return, port_vol, risk_free)
-    return best_weights, max
+    max_sharpe_ratio = portfolio_sharpe(port_return, port_vol, risk_free)
+    return best_weights, max_sharpe_ratio
     
 # display monte carlo data and plot the efficient frontier for maximum return (y) for each given risk (x)
 
@@ -173,7 +171,7 @@ def efficient_frontier(portfolios, weights_df):
 
 # display optimal weights for minimum volatility and maximum sharpe ratio
 
-def show_optimal(best_vol_weights, min, best_sharpe_weights, max, risk_free, ann_returns, ann_cov):
+def show_optimal(best_vol_weights, min_volatility, best_sharpe_weights, max_sharpe_ratio, risk_free, ann_returns, ann_cov):
     st.header('Minimum Annualised Volatility')
     st.write('The following asset weighting:')
 
@@ -190,8 +188,8 @@ def show_optimal(best_vol_weights, min, best_sharpe_weights, max, risk_free, ann
     columns = st.columns(3)
     temp_returns = portfolio_return(best_vol_weights, ann_returns)
     columns[0].metric('Annualised Return', round(temp_returns, 3))
-    columns[1].metric('Annualised Volatility', round(min, 3))
-    columns[2].metric('Sharpe Ratio', round(portfolio_sharpe(temp_returns, min,risk_free), 3))
+    columns[1].metric('Annualised Volatility', round(min_volatility, 3))
+    columns[2].metric('Sharpe Ratio', round(portfolio_sharpe(temp_returns, min_volatility, risk_free), 3))
 
     st.header('Maximum Sharpe Ratio')
     st.write('The following asset weighting:')
@@ -209,7 +207,7 @@ def show_optimal(best_vol_weights, min, best_sharpe_weights, max, risk_free, ann
     columns = st.columns(3)
     columns[0].metric('Annualised Return', round(portfolio_return(best_sharpe_weights, ann_returns), 3))
     columns[1].metric('Annualised Volatility', round(portfolio_vol(best_sharpe_weights, ann_cov), 3))
-    columns[2].metric('Sharpe Ratio', round(max, 3))
+    columns[2].metric('Sharpe Ratio', round(max_sharpe_ratio, 3))
   
 if "start" in st.session_state and st.session_state["start"]:
     selected_tickers = st.session_state["selected_tickers"]
